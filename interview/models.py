@@ -43,7 +43,7 @@ class Candidate(models.Model):
 
     first_advantage = models.TextField(max_length=1024, blank=True, verbose_name='优势')
     first_disadvantage = models.TextField(max_length=1024, blank=True, verbose_name='顾虑和不足')
-    first_result = models.CharField(max_length=256, choices=INTERVIEW_RESULT_TYPE, blank=True,
+    first_result = models.CharField(max_length=256, choices=FIRST_INTERVIEW_RESULT_TYPE, blank=True,
                                     verbose_name='初试结果')
     first_recommend_position = models.CharField(max_length=256, blank=True, verbose_name='推荐部分')
     first_interviewer = models.CharField(max_length=1024, blank=True, verbose_name='面试官')
@@ -61,8 +61,8 @@ class Candidate(models.Model):
                                                 verbose_name='抗压能力得分')
     second_advantage = models.TextField(max_length=1024, blank=True, verbose_name='优势')
     second_disadvantage = models.TextField(max_length=1024, blank=True, verbose_name='顾虑和不足')
-    second_result = models.CharField(max_length=256, choices=FIRST_INTERVIEW_RESULT_TYPE, blank=True,
-                                     verbose_name='专业f复试结果')
+    second_result = models.CharField(max_length=256, choices=INTERVIEW_RESULT_TYPE, blank=True,
+                                     verbose_name='专业复试结果')
     second_recommend_position = models.CharField(max_length=256, blank=True, verbose_name='建议方向或推荐部门')
     second_interviewer = models.CharField(max_length=256, blank=True, verbose_name='面试官')
     second_remark = models.CharField(max_length=256, blank=True, verbose_name='专业复试备注')
