@@ -2,3 +2,5 @@
 *.so
 settings/local.py
 venv
+*.csv
+*.txt
