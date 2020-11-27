@@ -31,7 +31,7 @@ def export_model_as_excel(modeladmin, request, queryset):
             fields_value = field_object.value_from_object(obj)
             csv_line_values.append(fields_value)
         writer.writerow(csv_line_values)
-        logger.info('%s 导出 %s 条应聘者资料' %(request.user, len(queryset)))
+        logger.info('%s 导出 %s 条应聘者资料' % (request.user, len(queryset)))
     return response
 
 
