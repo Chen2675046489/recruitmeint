@@ -25,12 +25,16 @@ SECRET_KEY = 'p_)@u9++rg0znx)dj2-w*&pqjoln=_j#3#p+*(+xxsorqqmz%e'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
+LOGIN_REDIRECT_URL = '/'
+SIMPLE_BACKEND_REDIRECT_URL = '/accounts/login/'
 
 # Application definition
 
 INSTALLED_APPS = [
+    'grappelli',
+    'registration',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -158,3 +162,6 @@ LOGGING = {
         },
     },
 }
+
+DING_WEB_HOOK = 'https://oapi.dingtalk.com/robot/send?' \
+           'access_token=c5bd6e0dc150d34ad938a57bfc2369ffd0429f129e47a135d8a6ebef80724b5a'

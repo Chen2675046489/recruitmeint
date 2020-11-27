@@ -16,9 +16,12 @@ Including another URLconf
 from django.conf.urls import url, include
 from django.contrib import admin
 from django.urls import path
+from django.utils.translation import gettext
 
 urlpatterns = [
-    url('^', include("jobs.urls")),
+    url(r'^', include("jobs.urls")),
+    path('grappelli/', include('grappelli.urls')),
     path('admin/', admin.site.urls),
+    url(r'^accounts/', include('registration.backends.simple.urls'))
 
 ]

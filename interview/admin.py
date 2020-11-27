@@ -1,15 +1,28 @@
 from django.contrib import admin
+from django.db.models import Q
+
+from interview.dingtalk import send
 from interview.models import Candidate
 from django.http import HttpResponse
 # Register your models here.
 import csv
 from datetime import datetime
 import logging
+from interview import candidate_fiedset as cf
 logger = logging.getLogger(__name__)
 
 exportable_fields = ('username', 'city', 'phone', 'bachelor_school', 'master_school', 'doctor_school',
                      'first_result', 'first_interviewer_user', 'second_result', 'second_interviewer_user', 'hr_score',
                      'hr_result', 'hr_interviewer_user')
+
+
+def notify_interviewer(modeladmin, request, queryset):
+    candidates = ""
+    interviewers = ""
+    for obj in queryset:
+        candidates = obj.username + '; ' + candidates
+        interviewers = obj.first_interviewer_user.username + '; ' + interviewers
+    send('候选人 %s 进入面试环节，亲爱的面试官，请准备好面试： %s' % (candidates, interviewers))
 
 
 def export_model_as_excel(modeladmin, request, queryset):
@@ -37,13 +50,19 @@ def export_model_as_excel(modeladmin, request, queryset):
 
 # 可以定义函数得属性为中文名称
 export_model_as_excel.short_description = '导出为CSV文件'
+export_model_as_excel.allowed_permissions = ('export',)
+notify_interviewer.short_description = '通知面试官面试'
 
 
 # 候选人管理类
 class CandidateAdmin(admin.ModelAdmin):
     exclude = ('creator', 'creator_date', 'modified_date')
 
-    actions = [export_model_as_excel, ]
+    actions = [export_model_as_excel, notify_interviewer, ]
+
+    def has_export_permission(self, request):
+        opts = self.opts
+        return request.user.has_perm('%s.%s' % (opts.app_label, 'export'))
 
     list_display = (
         'username', 'city', 'bachelor_school', 'first_score', 'first_result', 'first_interviewer_user',
@@ -62,16 +81,13 @@ class CandidateAdmin(admin.ModelAdmin):
 
     # readonly_fields = ('first_interviewer_user', 'second_interviewer_user', 'hr_interviewer_user',)
 
-    default_type = ('first_interviewer_user', 'second_interviewer_user')
-
     # list_editable = ('first_interviewer_user', 'second_interviewer_user')
 
-    # 根据当前登录的用户，判断是否有对应聘者进行面试官指定权限
+    # 根据当前登录的用户，判断在应聘者列表上是否有对应聘者进行面试官指定权限
     def get_list_editable(self, request):
         group_names = self.get_group_names(request.user)
-        logger.info('没有走进去这个方法')
         if request.user.is_superuser or 'HR' in group_names:
-            return self.default_type
+            return cf.default_type
         return ()
 
     # 使用更改函数，改变父类的方法
@@ -89,29 +105,26 @@ class CandidateAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj):
         group_names = self.get_group_names(request.user)
         if 'interviewer' in group_names:
-            logger.info("interviewer is in user's group of %s" % request.user.username)
-            return self.default_type
+            return cf.default_type
         return ()
 
+    def get_fieldsets(self, request, obj=None):
+        group_names = self.get_group_names(request.user)
+        if 'interviewer' in group_names and obj.first_interviewer_user == request.user:
+            return cf.default_fieldsets_first
+        elif 'interviewer' in group_names and obj.second_interviewer_user == request.user:
+            return cf.default_fieldsets_second
+        return cf.default_fieldsets
 
-    # 分组显示内容
-    fieldsets = (
-        (None, {'fields': ("user_id", ("username", "city", "phone"), ("email", "apply_position", "born_address"),
-                           ("gender", "candidate_remark"), ("bachelor_school", "master_school", "doctor_school"),
-                           "major", ("degree", "test_score_of_general_ability"), "paper_score", "last_editor")}),
-        ('第一轮面试记录', {'fields': ("first_score", "first_learning_ability", "first_professional_competency",
-                                "first_advantage", "first_disadvantage", "first_result", "first_recommend_position",
-                                "first_interviewer_user", "first_remark",)}),
-        ('第二轮专业复试记录', {'fields': ("second_score", "second_learning_ability", "second_professional_competency",
-                                  "second_pursue_of_excellence", "second_pressure_score", "second_advantage",
-                                  "second_disadvantage", "second_result", ("second_recommend_position",
-                                                                           "second_interviewer_user",
-                                                                           "second_remark")
-                                  ,)}),
-        ('HR第三轮复试记录', {'fields': ("hr_score", ("hr_responsibility", "hr_communication_ability", "hr_logic_ability"),
-                                  ("hr_potential", "hr_stability"), "hr_advantage", "hr_disadvantage", "hr_result",
-                                  "hr_interviewer_user", "hr_remark",)})
-    )
+    def get_queryset(self, request):
+        qs = super(CandidateAdmin, self,).get_queryset(request)
+
+        group_names = self.get_group_names(request.user)
+        if request.user.is_superuser or 'HR' in group_names:
+            return qs
+        return Candidate.objects.filter(
+            Q(first_interviewer_user=request.user) | Q(second_interviewer_user=request.user)
+        )
 
 
 admin.site.register(Candidate, CandidateAdmin)
