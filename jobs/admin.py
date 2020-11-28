@@ -1,5 +1,8 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+
+from interview.models import Candidate
 from jobs.models import Job, Resume
+from datetime import datetime
 
 
 # Register your models here.
@@ -17,9 +20,28 @@ class JobAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
+def enter_interview_process(modeladmin, request, queryset):
+    candidate_names = ""
+    for resume in queryset:
+        candidate = Candidate()
+        candidate.__dict__.update(resume.__dict__)
+        candidate.creator_date = datetime.now()
+        candidate.modified_date = datetime.now()
+        candidate_names = candidate.username + ',' + candidate_names
+        candidate.creator = request.user.username
+        candidate.save()
+    messages.add_message(request, messages.INFO, '候选人：%s 已成功进入面试流程' % (candidate_names))
+
+
+enter_interview_process.short_description = '进入面试流程'
+
+
 class ResumeAdmin(admin.ModelAdmin):
-    list_filter = ('username', 'applicant', 'city', 'apply_position', 'bachelor_school', 'master_school', 'major',
-                   'create_date')
+
+    actions = (enter_interview_process,)
+
+    list_display = ('username', 'applicant', 'city', 'apply_position', 'bachelor_school', 'master_school', 'major',
+                    'create_date')
 
     readonly_fields = ('applicant', 'create_date', 'modified_date')
 

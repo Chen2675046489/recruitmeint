@@ -1,5 +1,6 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Q
+from django.utils.safestring import mark_safe
 
 from interview.dingtalk import send
 from interview.models import Candidate
@@ -9,6 +10,8 @@ import csv
 from datetime import datetime
 import logging
 from interview import candidate_fiedset as cf
+from jobs.models import Resume
+
 logger = logging.getLogger(__name__)
 
 exportable_fields = ('username', 'city', 'phone', 'bachelor_school', 'master_school', 'doctor_school',
@@ -23,6 +26,7 @@ def notify_interviewer(modeladmin, request, queryset):
         candidates = obj.username + '; ' + candidates
         interviewers = obj.first_interviewer_user.username + '; ' + interviewers
     send('候选人 %s 进入面试环节，亲爱的面试官，请准备好面试： %s' % (candidates, interviewers))
+    messages.add_message(request, messages.INFO, '已经成功发送面试通知')
 
 
 def export_model_as_excel(modeladmin, request, queryset):
@@ -60,14 +64,14 @@ class CandidateAdmin(admin.ModelAdmin):
 
     actions = [export_model_as_excel, notify_interviewer, ]
 
+    list_display = (
+        'username', 'city', 'bachelor_school', 'get_resume', 'first_score', 'first_result', 'first_interviewer_user',
+        'second_result', 'second_interviewer_user', 'hr_score', 'hr_result', 'last_editor'
+    )
+
     def has_export_permission(self, request):
         opts = self.opts
         return request.user.has_perm('%s.%s' % (opts.app_label, 'export'))
-
-    list_display = (
-        'username', 'city', 'bachelor_school', 'first_score', 'first_result', 'first_interviewer_user',
-        'second_result', 'second_interviewer_user', 'hr_score', 'hr_result', 'last_editor'
-    )
 
     # 筛选列表
     list_filter = ('city', 'first_result', 'second_result', 'hr_score', 'first_interviewer_user',
@@ -78,6 +82,17 @@ class CandidateAdmin(admin.ModelAdmin):
 
     # 排序
     ordering = ('hr_result', 'second_result', 'first_result')
+
+    def get_resume(self, obj):
+        if not obj.phone:
+            return ""
+        resumes = Resume.objects.filter(phone=obj.phone)
+        if resumes and len(resumes) > 0:
+            return mark_safe('<a href="/resume/%s" target="_blank">%s</a' % (resumes[0].id, '查看简历'))
+        return ""
+
+    get_resume.short_description = '查看简历'
+    get_resume.allow_tags = True
 
     # readonly_fields = ('first_interviewer_user', 'second_interviewer_user', 'hr_interviewer_user',)
 
